@@ -1,80 +1,49 @@
 export default async function handler(req, res) {
- if (req.method !== 'POST') {
-   return res.status(405).json({ error: 'Method not allowed' });
- }
+  try {
+    const { ID: phoneNumber, COMMENTS: summary } = req.body;
+    console.log(`Otrzymane dane - Numer: ${phoneNumber}, Komentarz: ${summary}`);
 
- try {
-   const { ID: phoneNumber, COMMENTS: summary } = req.body;
-   
-   console.log('Searching for lead with phone:', phoneNumber);
+    const leadSearchUrl = `https://amso.bitrix24.pl/rest/73/audb28knfpklnuwq/crm.lead.list`;
+    const searchBody = {
+      filter: { 'TITLE': phoneNumber }
+    };
 
-   const leadSearchUrl = `https://amso.bitrix24.pl/rest/73/audb28knfpklnuwq/crm.lead.list`;
-   const searchBody = {
-     filter: { 'TITLE': phoneNumber }
-   };
-   
-   console.log('Search request:', JSON.stringify(searchBody));
+    const searchResponse = await fetch(leadSearchUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(searchBody)
+    });
 
-   const searchResponse = await fetch(leadSearchUrl, {
-     method: 'POST',
-     headers: {
-       'Content-Type': 'application/json'
-     },
-     body: JSON.stringify(searchBody)
-   });
+    const leadData = await searchResponse.json();
+    console.log('Odpowiedź z wyszukiwania:', leadData);
 
-   const leadData = await searchResponse.json();
-   console.log('Search response:', JSON.stringify(leadData));
+    if (!leadData.result || leadData.result.length === 0) {
+      throw new Error(`Nie znaleziono leada dla numeru ${phoneNumber}`);
+    }
 
-   if (!leadData.result || leadData.result.length === 0) {
-     return res.status(404).json({
-       status: 'error',
-       message: 'Lead not found',
-       searchedPhone: phoneNumber
-     });
-   }
+    const leadId = leadData.result[0].ID;
+    const updateUrl = `https://amso.bitrix24.pl/rest/73/audb28knfpklnuwq/crm.lead.update`;
+    
+    const updateResponse = await fetch(updateUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: leadId,
+        fields: { 'COMMENTS': summary }
+      })
+    });
 
-   const leadId = leadData.result[0].ID;
-   console.log('Found lead ID:', leadId);
+    const updateResult = await updateResponse.json();
+    console.log('Wynik aktualizacji:', updateResult);
 
-   const updateUrl = `https://amso.bitrix24.pl/rest/73/audb28knfpklnuwq/crm.lead.update`;
-   const updateBody = {
-     id: leadId,
-     fields: {
-       'COMMENTS': summary
-     },
-     params: { "REGISTER_SONET_EVENT": "Y" }
-   };
+    return res.status(200).json({
+      status: 'success',
+      leadId,
+      updateResult
+    });
 
-   console.log('Update request:', JSON.stringify(updateBody));
-
-   const updateResponse = await fetch(updateUrl, {
-     method: 'POST',
-     headers: {
-       'Content-Type': 'application/json'
-     },
-     body: JSON.stringify(updateBody)
-   });
-
-   const updateData = await updateResponse.json();
-   console.log('Update response:', JSON.stringify(updateData));
-
-   return res.status(200).json({
-     status: 'success',
-     message: 'Lead updated',
-     details: {
-       leadId,
-       phoneNumber,
-       summary
-     }
-   });
-
- } catch (error) {
-   console.error('Error:', error);
-   return res.status(500).json({
-     status: 'error',
-     message: error.message,
-     stack: error.stack
-   });
- }
+  } catch (error) {
+    console.error('Błąd:', error);
+    return res.status(500).json({ error: error.message });
+  }
 }
