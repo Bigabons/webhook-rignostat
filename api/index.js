@@ -1,45 +1,66 @@
 export default async function handler(req, res) {
   try {
     const { ID: phoneNumber, COMMENTS: summary } = req.body;
-    console.log(`Otrzymane dane - Numer: ${phoneNumber}, Komentarz: ${summary}`);
+    
+    // Formatowanie numeru telefonu - usuwamy wszystkie znaki oprócz cyfr
+    const formattedPhone = phoneNumber.replace(/\D/g, '');
+    console.log(`Oryginalny numer: ${phoneNumber}, Sformatowany: ${formattedPhone}`);
 
+    // Różne warianty formatu numeru
+    const phoneVariants = [
+      formattedPhone,
+      `+${formattedPhone}`,
+      formattedPhone.replace(/^48/, ''), // bez prefiksu kraju
+      `+48${formattedPhone.replace(/^48/, '')}` // z prefiksem kraju
+    ];
+
+    // Szukanie leada po wszystkich wariantach numeru
     const leadSearchUrl = `https://amso.bitrix24.pl/rest/73/audb28knfpklnuwq/crm.lead.list`;
-    const searchBody = {
-      filter: { 'TITLE': phoneNumber }
-    };
+    let leadId = null;
 
-    const searchResponse = await fetch(leadSearchUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(searchBody)
-    });
+    for (const phoneVariant of phoneVariants) {
+      const searchResponse = await fetch(leadSearchUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filter: { 'TITLE': phoneVariant }
+        })
+      });
 
-    const leadData = await searchResponse.json();
-    console.log('Odpowiedź z wyszukiwania:', leadData);
-
-    if (!leadData.result || leadData.result.length === 0) {
-      throw new Error(`Nie znaleziono leada dla numeru ${phoneNumber}`);
+      const leadData = await searchResponse.json();
+      if (leadData.result?.length) {
+        leadId = leadData.result[0].ID;
+        break;
+      }
     }
 
-    const leadId = leadData.result[0].ID;
-    const updateUrl = `https://amso.bitrix24.pl/rest/73/audb28knfpklnuwq/crm.lead.update`;
-    
-    const updateResponse = await fetch(updateUrl, {
+    if (!leadId) {
+      return res.status(404).json({
+        error: `Nie znaleziono leada dla numeru ${phoneNumber}`
+      });
+    }
+
+    // Dodawanie komentarza
+    const commentUrl = `https://amso.bitrix24.pl/rest/73/audb28knfpklnuwq/crm.timeline.comment.add`;
+    const commentResponse = await fetch(commentUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        id: leadId,
-        fields: { 'COMMENTS': summary }
+        fields: {
+          ENTITY_ID: leadId,
+          ENTITY_TYPE: 'lead',
+          COMMENT: summary
+        }
       })
     });
 
-    const updateResult = await updateResponse.json();
-    console.log('Wynik aktualizacji:', updateResult);
-
+    const commentResult = await commentResponse.json();
+    
     return res.status(200).json({
       status: 'success',
       leadId,
-      updateResult
+      commentResult,
+      usedPhoneFormat: leadId ? phoneVariants.find(p => p === phoneNumber) : null
     });
 
   } catch (error) {
