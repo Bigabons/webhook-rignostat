@@ -1,6 +1,16 @@
-export default async function handler(request, response) {
+export const config = {
+    runtime: 'edge',
+};
+
+export default async function handler(request) {
     if (request.method !== 'POST') {
-        return response.status(405).json({ message: 'Metoda niedozwolona' });
+        return new Response(
+            JSON.stringify({ message: 'Metoda niedozwolona' }), 
+            { 
+                status: 405,
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
     }
 
     try {
@@ -8,17 +18,29 @@ export default async function handler(request, response) {
         
         console.log('Otrzymane dane:', data);
 
-        return response.status(200).json({ 
-            status: 'success', 
-            message: 'Dane otrzymane',
-            data: data 
-        });
+        return new Response(
+            JSON.stringify({ 
+                status: 'success', 
+                message: 'Dane otrzymane',
+                data: data 
+            }), 
+            { 
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
 
     } catch (error) {
         console.error('Błąd:', error);
-        return response.status(500).json({ 
-            status: 'error', 
-            message: 'Wystąpił błąd' 
-        });
+        return new Response(
+            JSON.stringify({ 
+                status: 'error', 
+                message: 'Wystąpił błąd' 
+            }), 
+            { 
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
     }
 }
