@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     const { ID: phoneNumber, COMMENTS: summary } = req.body;
     
     // Szukamy leada po TITLE (numer telefonu)
-    const leadSearchUrl = `https://srmo.bitrix24.pl/rest/73/udb28kntpkhnwq/crm.lead.list`;
+    const leadSearchUrl = `https://amso.bitrix24.pl/rest/73/udb28kntpkhnwq/crm.lead.list`;
     const searchResponse = await fetch(leadSearchUrl, {
       method: 'POST',
       headers: {
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     const leadId = leadData.result[0].ID;
 
     // Aktualizujemy leada
-    const updateUrl = `https://srmo.bitrix24.pl/rest/73/udb28kntpkhnwq/crm.lead.update`;
+    const updateUrl = `https://amso.bitrix24.pl/rest/73/udb28kntpkhnwq/crm.lead.update`;
     await fetch(updateUrl, {
       method: 'POST',
       headers: {
