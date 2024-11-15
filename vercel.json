@@ -1,15 +1,4 @@
 {
   "version": 2,
-  "functions": {
-    "api/webhook.js": {
-      "runtime": "@vercel/node@2.15.1"
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/webhook",
-      "dest": "api/webhook.js",
-      "methods": ["POST", "OPTIONS"]
-    }
-  ]
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api" }]
 }
