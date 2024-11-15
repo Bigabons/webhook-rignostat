@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     console.log('Received phone number:', phoneNumber);
 
     // Pobierz wszystkie leady bez filtra
-    const leadSearchUrl = `https://srmo.bitrix24.pl/rest/73/udb28kntpkhnwq/crm.lead.list`;
+    const leadSearchUrl = `https://amso.bitrix24.pl/rest/73/udb28kntpkhnwq/crm.lead.list`;
     const searchResponse = await fetch(leadSearchUrl, {
       method: 'POST',
       headers: {
